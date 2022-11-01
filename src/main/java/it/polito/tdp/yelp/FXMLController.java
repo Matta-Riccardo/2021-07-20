@@ -7,7 +7,9 @@ package it.polito.tdp.yelp;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.yelp.model.Giornalista;
 import it.polito.tdp.yelp.model.Model;
+import it.polito.tdp.yelp.model.User;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -38,13 +40,13 @@ public class FXMLController {
     private TextField txtX2; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbAnno"
-    private ComboBox<?> cmbAnno; // Value injected by FXMLLoader
+    private ComboBox<Integer> cmbAnno; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtN"
     private TextField txtN; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbUtente"
-    private ComboBox<?> cmbUtente; // Value injected by FXMLLoader
+    private ComboBox<User> cmbUtente; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtX1"
     private TextField txtX1; // Value injected by FXMLLoader
@@ -55,16 +57,75 @@ public class FXMLController {
     @FXML
     void doCreaGrafo(ActionEvent event) {
 
+    	txtResult.clear();
+    	cmbUtente.getItems().clear();
+    	try {
+    		
+    		int nRecensioni = Integer.parseInt(txtN.getText());
+    		
+    		if(nRecensioni<=0) {
+    			txtResult.appendText("Inserisci un valore che sia maggiore di zero\n");
+    			return;
+    		}
+    		
+    		if(cmbAnno.getValue() == null) {
+    			txtResult.appendText("Seleziona un anno dalla tendina!\n");
+    			return;
+    		}
+    		
+    		int anno = cmbAnno.getValue();
+    		txtResult.appendText(String.format("Stai cercando di creare un grafo dove ogni vertice è rappresentato da\nun utente che risulta aver scritto almeno %d recensioni nell'anno %d.\n", nRecensioni, anno));
+    		model.creaGrafo(nRecensioni, anno);
+    		
+    		cmbUtente.getItems().addAll(model.getVertici());
+    		txtResult.appendText(String.format("Grafo creato con %d vertici e %d archi\n", model.nVertici(), model.nArchi()));
+    		
+    	}catch(NumberFormatException e) {
+    		e.printStackTrace();
+    		txtResult.setText("Inserisci un valore numerico intero");
+    		return;
+    	}
     }
 
     @FXML
     void doUtenteSimile(ActionEvent event) {
-
+    	User utente = cmbUtente.getValue();
+    	txtResult.clear();
+    	
+    	if(utente == null) {
+    		txtResult.appendText("Selezionare un utente prima di procedere con la ricerca!\n");
+    		return;
+    	}
+    	
+    	for(User user : model.getUtenteSimile(utente)) {
+    		txtResult.appendText(String.format("UTENTE: '%s'       GRADO: %.0f\n", user.toString(), model.getPeso()));
+    	}
     }
     
     @FXML
     void doSimula(ActionEvent event) {
-
+    	
+    	txtResult.clear();
+    	
+    	try {
+    		
+    		int X1 = Integer.parseInt(txtX1.getText());
+    		int X2 = Integer.parseInt(txtX2.getText());
+    		
+    		model.Simula(X1, X2);
+    		
+    		for(Giornalista g : model.getGiornalisti()) {
+    			txtResult.appendText(g.toString()+"\n");
+    		}
+    		
+    		txtResult.appendText(String.format("Hai impiegato %d giorni per concludere l'indagine!\n", model.getNGiorni()));
+    		
+    	}catch(NumberFormatException e) {
+    		e.printStackTrace();
+    		txtResult.appendText("Inserisci un valore numerico intero per entrambi i campi!");
+    		return;
+    	}
+    	
     }
     
 
@@ -84,5 +145,10 @@ public class FXMLController {
     
     public void setModel(Model model) {
     	this.model = model;
+    	
+    	cmbAnno.getItems().clear();
+    	for(Integer i = 2005; i<2014; i++ ) {
+    		cmbAnno.getItems().add(i);
+    	}
     }
 }

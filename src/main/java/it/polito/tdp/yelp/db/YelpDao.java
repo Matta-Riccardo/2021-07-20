@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.yelp.model.Business;
 import it.polito.tdp.yelp.model.Review;
@@ -80,23 +82,51 @@ public class YelpDao {
 		}
 	}
 	
-	public List<User> getAllUsers(){
+	public Map<String, User> getAllUsers(){
 		String sql = "SELECT * FROM Users";
-		List<User> result = new ArrayList<User>();
+		Map<String, User> result = new HashMap<String, User>();
 		Connection conn = DBConnect.getConnection();
 
 		try {
 			PreparedStatement st = conn.prepareStatement(sql);
 			ResultSet res = st.executeQuery();
 			while (res.next()) {
-
-				User user = new User(res.getString("user_id"),
+				
+				result.put(res.getString("user_id"), new User(res.getString("user_id"),
 						res.getInt("votes_funny"),
 						res.getInt("votes_useful"),
 						res.getInt("votes_cool"),
 						res.getString("name"),
 						res.getDouble("average_stars"),
-						res.getInt("review_count"));
+						res.getInt("review_count")));
+			}
+			res.close();
+			st.close();
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public List<User> getUsersByRecensioni(int n, Map<String, User> userIdMap){
+		String sql = "SELECT r.user_id "
+				+ "FROM users u, reviews r "
+				+ "WHERE r.user_id = u.user_id "
+				+ "GROUP BY u.user_id "
+				+ "HAVING COUNT(*) >= ?";
+		List<User> result = new ArrayList<User>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, n);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+
+				User user = userIdMap.get(res.getString("r.user_id"));
 				
 				result.add(user);
 			}
@@ -111,5 +141,40 @@ public class YelpDao {
 		}
 	}
 	
-	
+	public int getPesoArco(User u1, User u2, int anno) {
+		
+		String sql = "SELECT COUNT(*) AS nReview "
+				+ "FROM reviews r1, reviews r2 "
+				+ "WHERE r1.business_id = r2.business_id "
+				+ "AND YEAR(r1.review_date) = ? "
+				+ "AND YEAR(r2.review_date) = ? "
+				+ "AND r1.user_id = ? "
+				+ "AND r2.user_id = ?";
+		
+		Connection conn = DBConnect.getConnection();
+		int peso = 0;
+		
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			st.setInt(2, anno);
+			st.setString(3, u1.getUserId());
+			st.setString(4, u2.getUserId());
+			ResultSet res = st.executeQuery();
+			
+			if (res.first()) {
+				peso = res.getInt("nReview");
+			}
+			
+			res.close();
+			st.close();
+			conn.close();
+			return peso;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return 0;
+		}
+		
+	}
 }
